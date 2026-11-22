@@ -1,0 +1,38 @@
+appId: com.alpstudios.alpinoxi
+productName: Alpinoxi Client
+copyright: Copyright © 2026 alpstudios346
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+
+asar: true
+compression: maximum
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.png
+  artifactName: Alpinoxi-Client-${version}-Setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Alpinoxi Client
+  installerIcon: build/icon.png
+  uninstallerIcon: build/icon.png
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: Alpinoxi-Client-${version}-Portable.${ext}
