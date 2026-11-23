@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "package": "dev.alpinoxi.mod.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": ["MouseMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -4,7 +4,7 @@ import { BrowserWindow } from 'electron'
 import type { Account } from '@shared/types'
 import { dirs } from '../paths'
 import { ListStore, JsonStore } from '../store'
-import { getSettings } from '../settings'
+import { getSettings, OFFICIAL_MS_CLIENT_ID } from '../settings'
 import { getJson, postForm, postJson } from '../http'
 
 const MS_AUTHORITY = 'https://login.microsoftonline.com/consumers/oauth2/v2.0'
@@ -13,6 +13,14 @@ const XSTS_AUTH = 'https://xsts.auth.xboxlive.com/xsts/authorize'
 const MC_LOGIN = 'https://api.minecraftservices.com/authentication/login_with_xbox'
 const MC_PROFILE = 'https://api.minecraftservices.com/minecraft/profile'
 const MS_SCOPE = 'XboxLive.signin offline_access'
+
+/**
+ * "mc launcher orji": Kullanıcı kendi Azure uygulamasını girmemişse resmî
+ * Minecraft Launcher istemci kimliği (herkese açık) kullanılır.
+ */
+function resolvedClientId(): string {
+  return getSettings().microsoftClientId || process.env.ALPINOXI_MS_CLIENT_ID || OFFICIAL_MS_CLIENT_ID
+}
 
 let accountStore: ListStore<Account> | null = null
 let currentStore: JsonStore<{ id: string | null }> | null = null
@@ -95,14 +103,8 @@ interface DeviceCodeResponse {
 }
 
 export async function microsoftStart(): Promise<DeviceCodeResponse> {
-  const clientId = getSettings().microsoftClientId || process.env.ALPINOXI_MS_CLIENT_ID || ''
-  if (!clientId) {
-    throw new Error(
-      'Microsoft istemci kimliği ayarlanmamış. Ayarlar > Hesap bölümünden bir Azure uygulama (client id) girin.'
-    )
-  }
   return postForm<DeviceCodeResponse>(`${MS_AUTHORITY}/devicecode`, {
-    client_id: clientId,
+    client_id: resolvedClientId(),
     scope: MS_SCOPE
   })
 }
@@ -115,7 +117,7 @@ interface TokenResponse {
 }
 
 export async function microsoftPoll(deviceCode: string): Promise<Account | null> {
-  const clientId = getSettings().microsoftClientId || process.env.ALPINOXI_MS_CLIENT_ID || ''
+  const clientId = resolvedClientId()
   const res = await fetch(`${MS_AUTHORITY}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -177,8 +179,7 @@ async function completeMicrosoftLogin(token: TokenResponse): Promise<Account> {
 export async function microsoftRefresh(): Promise<Account | null> {
   const account = currentAccount()
   if (!account || account.type !== 'microsoft' || !account.refreshToken) return account
-  const clientId = getSettings().microsoftClientId || process.env.ALPINOXI_MS_CLIENT_ID || ''
-  if (!clientId) return account
+  const clientId = resolvedClientId()
   try {
     const data = await postForm<TokenResponse>(`${MS_AUTHORITY}/token`, {
       client_id: clientId,

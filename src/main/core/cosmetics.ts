@@ -28,11 +28,47 @@ export const COSMETIC_CATALOG: CosmeticItem[] = [
   { id: 'emote-dance', name: 'Dans', category: 'emote', textureUrl: IMG('minecraft emote icon, dancing character, pixel art badge'), animated: true, freeInMicrosoft: true, requiredForElyby: false }
 ]
 
+export interface ActiveSkin {
+  /** `dirs.skins` altındaki kalıcı dosya yolu */
+  path: string
+  /** 'classic' | 'slim' */
+  model: string
+}
+
 let equippedStore: JsonStore<EquippedCosmetics> | null = null
+let activeSkinStore: JsonStore<Partial<ActiveSkin>> | null = null
 
 function equipped(): JsonStore<EquippedCosmetics> {
   if (!equippedStore) equippedStore = new JsonStore<EquippedCosmetics>(join(dirs.cosmetics, 'equipped.json'), {})
   return equippedStore
+}
+
+function activeSkinFile(): JsonStore<Partial<ActiveSkin>> {
+  if (!activeSkinStore) activeSkinStore = new JsonStore<Partial<ActiveSkin>>(join(dirs.skins, 'active.json'), {})
+  return activeSkinStore
+}
+
+/**
+ * Oyunda (client içi) kullanılacak aktif skin'i kaydeder. QuickSkin bulunmayan
+ * sürümlerde launcher bu dosyayı oyun dizinine kopyalar; böylece skin değiştirme
+ * launcher tarafından yönetilir.
+ */
+export function setActiveSkin(filePath: string, model: 'classic' | 'slim' = 'classic'): ActiveSkin {
+  const info = readPngInfo(filePath)
+  const valid = (info.width === 64 && (info.height === 64 || info.height === 32)) || (info.width === 128 && info.height === 128)
+  if (!valid) throw new Error('Skin 64x64, 64x32 veya 128x128 PNG olmalı')
+  mkdirSync(dirs.skins, { recursive: true })
+  const dest = join(dirs.skins, 'active.png')
+  copyFileSync(filePath, dest)
+  activeSkinFile().replace({ path: dest, model })
+  return { path: dest, model }
+}
+
+export function getActiveSkin(): ActiveSkin | null {
+  const rec = activeSkinFile().get()
+  if (!rec.path) return null
+  if (!existsSync(rec.path)) return null
+  return { path: rec.path, model: rec.model ?? 'classic' }
 }
 
 /** Uploaded items are exposed through the `alpinoxi://` protocol. */
@@ -89,15 +125,9 @@ export interface UploadResult {
  * Stores an uploaded skin. Accepts classic (64x64) and legacy (64x32) layouts.
  * Returns an `alpinoxi://` url the renderer can display.
  */
-export function uploadSkinFile(filePath: string): UploadResult {
-  const info = readPngInfo(filePath)
-  const valid = (info.width === 64 && (info.height === 64 || info.height === 32)) || (info.width === 128 && info.height === 128)
-  if (!valid) throw new Error('Skin 64x64, 64x32 veya 128x128 PNG olmalı')
-  const dir = join(dirs.skins)
-  mkdirSync(dir, { recursive: true })
-  const dest = join(dir, `skin-${Date.now()}.png`)
-  copyFileSync(filePath, dest)
-  return { url: `alpinoxi://skin/${basename(dest)}`, animated: false }
+export function uploadSkinFile(filePath: string, model: 'classic' | 'slim' = 'classic'): UploadResult {
+  const active = setActiveSkin(filePath, model)
+  return { url: `alpinoxi://skin/${basename(active.path)}`, animated: false }
 }
 
 /**

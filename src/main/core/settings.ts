@@ -3,6 +3,8 @@ import type { AppSettings } from '@shared/types'
 import { dirs } from './paths'
 import { JsonStore } from './store'
 
+export const OFFICIAL_MS_CLIENT_ID = '00000000402b5328'
+
 export const defaultSettings = (): AppSettings => ({
   dataDir: dirs.root,
   language: 'tr',
@@ -15,7 +17,7 @@ export const defaultSettings = (): AppSettings => ({
   javaMemoryDefaultMb: 4096,
   autoUpdate: true,
   socialServerUrl: 'ws://localhost:8787',
-  microsoftClientId: '',
+  microsoftClientId: OFFICIAL_MS_CLIENT_ID,
   youtubeClientId: '',
   youtubeClientSecret: ''
 })

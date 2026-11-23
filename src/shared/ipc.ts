@@ -107,6 +107,11 @@ export const IPC = {
     partyLeave: 'social:party:leave',
     partyState: 'social:party:state'
   },
+  bridge: {
+    push: 'bridge:push',
+    pull: 'bridge:pull',
+    state: 'bridge:state'
+  },
   youtube: {
     authStart: 'youtube:auth:start',
     authComplete: 'youtube:auth:complete',
@@ -125,6 +130,7 @@ export const EVENTS = {
   socialUpdate: 'event:socialUpdate',
   accountUpdate: 'event:accountUpdate',
   youtubeUploadProgress: 'event:youtubeUploadProgress',
+  bridgeUpdate: 'event:bridgeUpdate',
   toast: 'event:toast'
 } as const
 
@@ -133,6 +139,19 @@ export interface SocialPayload {
   party: Party | null
   connected: boolean
   selfId?: string
+}
+
+export interface BridgeSkin {
+  path: string
+  model: string
+  username: string
+}
+
+/** Launcher tarafından okunan birleşik köprü durumu (oyun içi modülle paylaşılır). */
+export interface BridgeSnapshot {
+  hud: HudConfig
+  social: SocialPayload
+  skin?: BridgeSkin | null
 }
 
 export interface ToastPayload {
@@ -227,6 +246,11 @@ export interface AlpinoxiApi {
     partyLeave(): Promise<void>
     partyState(): Promise<SocialPayload>
   }
+  bridge: {
+    push(instanceId?: string): Promise<void>
+    pull(instanceId?: string): Promise<boolean>
+    state(): Promise<BridgeSnapshot>
+  }
   youtube: {
     authStart(): Promise<{ authUrl: string }>
     authComplete(): Promise<YoutubeChannel[]>
@@ -241,6 +265,7 @@ export interface AlpinoxiApi {
     socialUpdate(cb: (e: SocialPayload) => void): () => void
     accountUpdate(cb: (e: Account[]) => void): () => void
     youtubeUploadProgress(cb: (e: { percent: number }) => void): () => void
+    bridgeUpdate(cb: (e: BridgeSnapshot) => void): () => void
     toast(cb: (e: ToastPayload) => void): () => void
   }
 }

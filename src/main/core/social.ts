@@ -137,3 +137,39 @@ export function leaveParty(): void {
   state.party = null
   emit()
 }
+
+function normalizeStatus(status: string): Friend['status'] {
+  return status === 'online' || status === 'playing' || status === 'away' ? status : 'offline'
+}
+
+/**
+ * Oyun içi modülün köprü dosyasında yazdığı arkadaş/parti durumunu launcher
+ * durumuna uygular (Essential benzeri senkron).
+ */
+export function applySocialFromBridge(
+  friends: { id: string; username: string; status: string }[],
+  party: {
+    id: string
+    code: string
+    hostId: string
+    members: { id: string; username: string; isHost: boolean; ready: boolean }[]
+  } | null
+): void {
+  state.friends = friends.map((f) => ({ id: f.id, username: f.username, status: normalizeStatus(f.status) }))
+  state.party = party
+    ? {
+        id: party.id,
+        code: party.code,
+        hostId: party.hostId,
+        createdAt: Date.now(),
+        members: party.members.map((m) => ({
+          id: m.id,
+          username: m.username,
+          isHost: m.isHost,
+          ready: m.ready
+        }))
+      }
+    : null
+  stateStore().replace({ friends: state.friends })
+  emit()
+}

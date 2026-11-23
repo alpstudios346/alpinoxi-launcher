@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC, EVENTS } from '@shared/ipc'
-import type { AlpinoxiApi, SocialPayload, ToastPayload } from '@shared/ipc'
+import type { AlpinoxiApi, BridgeSnapshot, SocialPayload, ToastPayload } from '@shared/ipc'
 import type {
   Account,
   AppSettings,
@@ -106,6 +106,11 @@ const api: AlpinoxiApi = {
     partyLeave: () => ipcRenderer.invoke(IPC.social.partyLeave),
     partyState: () => ipcRenderer.invoke(IPC.social.partyState)
   },
+  bridge: {
+    push: (instanceId?: string) => ipcRenderer.invoke(IPC.bridge.push, instanceId),
+    pull: (instanceId?: string) => ipcRenderer.invoke(IPC.bridge.pull, instanceId),
+    state: () => ipcRenderer.invoke(IPC.bridge.state)
+  },
   youtube: {
     authStart: () => ipcRenderer.invoke(IPC.youtube.authStart),
     authComplete: () => ipcRenderer.invoke(IPC.youtube.authComplete),
@@ -120,6 +125,7 @@ const api: AlpinoxiApi = {
     socialUpdate: (cb: (e: SocialPayload) => void) => subscribe(EVENTS.socialUpdate, cb),
     accountUpdate: (cb: (e: Account[]) => void) => subscribe(EVENTS.accountUpdate, cb),
     youtubeUploadProgress: (cb: (e: { percent: number }) => void) => subscribe(EVENTS.youtubeUploadProgress, cb),
+    bridgeUpdate: (cb: (e: BridgeSnapshot) => void) => subscribe(EVENTS.bridgeUpdate, cb),
     toast: (cb: (e: ToastPayload) => void) => subscribe(EVENTS.toast, cb)
   }
 }

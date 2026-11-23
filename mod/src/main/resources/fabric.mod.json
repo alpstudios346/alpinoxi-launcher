@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "alpinoxi",
+  "version": "${version}",
+  "name": "Alpinoxi Client",
+  "description": "Alpinoxi Client oyun içi modülü: HUD, arkadaşlık & parti (Essential benzeri) ve Dawn tarzı menü. Alpinoxi Launcher ile senkronize çalışır.",
+  "authors": ["alpstudios346"],
+  "contact": {
+    "homepage": "https://github.com/alpstudios346/alpinoxi-launcher"
+  },
+  "license": "MIT",
+  "icon": "assets/alpinoxi/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.alpinoxi.mod.AlpinoxiMod"]
+  },
+  "mixins": ["alpinoxi.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": ">=1.19.4 <1.22",
+    "java": ">=17"
+  },
+  "recommends": {
+    "quickskin": "*"
+  }
+}

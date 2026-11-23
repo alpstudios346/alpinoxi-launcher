@@ -42,6 +42,14 @@ import {
 } from '../core/cosmetics'
 import { getHud, setHud } from '../core/hud'
 import {
+  activeBridgeInstance,
+  onBridgeUpdate,
+  pullBridge,
+  pushBridge,
+  readBridge,
+  setBridgeInstance
+} from '../core/bridge'
+import {
   addFriend,
   connectSocial,
   createParty,
@@ -71,7 +79,11 @@ async function pickFile(filters: Electron.FileFilter[]): Promise<string | null> 
 }
 
 export function registerIpc(): void {
-  onSocialUpdate((payload) => send(EVENTS.socialUpdate, payload))
+  onSocialUpdate((payload) => {
+    send(EVENTS.socialUpdate, payload)
+    pushBridge()
+  })
+  onBridgeUpdate((snapshot) => send(EVENTS.bridgeUpdate, snapshot))
 
   // ---- app -----------------------------------------------------------------
   ipcMain.handle(IPC.app.info, (): AppInfo => ({
@@ -152,8 +164,9 @@ export function registerIpc(): void {
       })
       if (!res.ok) throw new Error(`Skin yüklenemedi (${res.status})`)
     } else {
-      uploadSkinFile(filePath)
+      uploadSkinFile(filePath, variant)
     }
+    pushBridge()
   })
 
   // ---- launch --------------------------------------------------------------
@@ -164,11 +177,20 @@ export function registerIpc(): void {
       ? listAccounts().find((a) => a.id === instance.accountId) ?? currentAccount()
       : currentAccount()
     if (!account) throw new Error('Önce bir hesap ekleyin')
+    // Oyun içi modülle senkron için köprü hedefini ayarla ve mevcut durumu yaz.
+    setBridgeInstance(instanceId)
+    pushBridge(instanceId)
     const startedAt = Date.now()
     await launchInstance(instance, account, {
       onProgress: (e) => send(EVENTS.progress, e),
-      onLog: (e) => send(EVENTS.gameLog, e),
+      onLog: (e) => {
+        send(EVENTS.gameLog, e)
+        // Oyun açılırken modun yazdığı değişiklikleri yakala.
+        if (e.stream === 'launcher') pullBridge(instanceId)
+      },
       onExit: (code) => {
+        pullBridge(instanceId)
+        setBridgeInstance(null)
         send(EVENTS.gameExit, { instanceId, code })
         const updated = updateInstance(instanceId, {
           lastPlayedAt: Date.now(),
@@ -224,7 +246,9 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.cosmetics.uploadSkin, async () => {
     const file = await pickFile([{ name: 'PNG', extensions: ['png'] }])
     if (!file) return null
-    return uploadSkinFile(file)
+    const result = uploadSkinFile(file)
+    pushBridge()
+    return result
   })
   ipcMain.handle(IPC.cosmetics.uploadCape, async () => {
     const file = await pickFile([{ name: 'PNG', extensions: ['png'] }])
@@ -241,21 +265,49 @@ export function registerIpc(): void {
   })
 
   // ---- hud -----------------------------------------------------------------
-  ipcMain.handle(IPC.hud.get, () => getHud())
-  ipcMain.handle(IPC.hud.set, (_e, patch) => setHud(patch))
+  ipcMain.handle(IPC.hud.get, () => {
+    pullBridge()
+    return getHud()
+  })
+  ipcMain.handle(IPC.hud.set, (_e, patch) => {
+    const next = setHud(patch)
+    pushBridge()
+    return next
+  })
 
   // ---- social --------------------------------------------------------------
   ipcMain.handle(IPC.social.connect, () => {
     connectSocial()
   })
   ipcMain.handle(IPC.social.disconnect, () => disconnectSocial())
-  ipcMain.handle(IPC.social.friends, () => socialState().friends)
+  ipcMain.handle(IPC.social.friends, () => {
+    pullBridge()
+    return socialState().friends
+  })
   ipcMain.handle(IPC.social.addFriend, (_e, username: string) => addFriend(username))
   ipcMain.handle(IPC.social.removeFriend, (_e, id: string) => removeFriend(id))
   ipcMain.handle(IPC.social.partyCreate, () => createParty())
   ipcMain.handle(IPC.social.partyJoin, (_e, code: string) => joinParty(code))
   ipcMain.handle(IPC.social.partyLeave, () => leaveParty())
-  ipcMain.handle(IPC.social.partyState, () => socialState())
+  ipcMain.handle(IPC.social.partyState, () => {
+    pullBridge()
+    return socialState()
+  })
+
+  // ---- bridge --------------------------------------------------------------
+  ipcMain.handle(IPC.bridge.push, (_e, instanceId?: string) => {
+    pushBridge(instanceId ?? activeBridgeInstance())
+  })
+  ipcMain.handle(IPC.bridge.pull, (_e, instanceId?: string) => {
+    const target = instanceId ?? activeBridgeInstance()
+    const changed = pullBridge(target)
+    return changed
+  })
+  ipcMain.handle(IPC.bridge.state, () => {
+    const target = activeBridgeInstance()
+    pullBridge(target)
+    return { hud: getHud(), social: socialState(), skin: target ? readBridge(target)?.skin ?? null : null }
+  })
 
   // ---- youtube -------------------------------------------------------------
   ipcMain.handle(IPC.youtube.authStart, () => youtubeAuthStart())

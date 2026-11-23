@@ -11,3 +11,9 @@ data/
 .env.local
 *.local
 *.tsbuildinfo
+
+# Fabric mod (Gradle / Loom)
+mod/.gradle/
+mod/build/
+mod/run/
+mod/.fabric/

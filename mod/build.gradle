@@ -1,0 +1,69 @@
+plugins {
+    id 'fabric-loom' version '1.6-SNAPSHOT'
+    id 'maven-publish'
+}
+
+// --- Çoklu Minecraft sürümü desteği -----------------------------------------
+// Hedef sürüm build sırasında -Pmc ile seçilir (varsayılan: 1.20.1):
+//   ./gradlew build               -> 1.20.1 (QuickSkin ile birlikte)
+//   ./gradlew build -Pmc=1.21.1    -> 1.21.1 (skin, client içi çalışır)
+// Yarn mappings ve Fabric API sürümleri meta.fabricmc.net / maven'den doğrulanmıştır.
+def mc = (project.findProperty('mc') ?: '1.20.1').toString()
+
+ext.mcVersions = [
+        '1.19.4': [yarn: '1.19.4+build.2', api: '0.87.2+1.19.4'],
+        '1.20.1': [yarn: '1.20.1+build.10', api: '0.92.12+1.20.1'],
+        '1.20.4': [yarn: '1.20.4+build.3', api: '0.97.3+1.20.4'],
+        '1.21.1': [yarn: '1.21.1+build.3', api: '0.116.18+1.21.1']
+]
+
+if (!ext.mcVersions.containsKey(mc)) {
+    throw new GradleException("Bilinmeyen Minecraft sürümü: '${mc}'. Desteklenenler: ${ext.mcVersions.keySet()}")
+}
+def target = ext.mcVersions[mc]
+
+version = "${project.mod_version}+mc${mc}"
+group = project.maven_group
+
+base {
+    archivesName = "${project.archives_base_name}-${mc}"
+}
+
+repositories {
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${mc}"
+    mappings "net.fabricmc:yarn:${target.yarn}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${target.api}"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'mc', mc
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version, 'mc': mc
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 17
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jar {
+    from('LICENSE') {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}

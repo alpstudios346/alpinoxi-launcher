@@ -62,6 +62,7 @@ export default function App(): ReactNode {
       }),
       window.alpinoxi.on.instanceUpdate((e) => store.applyInstance(e)),
       window.alpinoxi.on.socialUpdate((e) => useApp.setState({ social: e })),
+      window.alpinoxi.on.bridgeUpdate((e) => useApp.setState({ hud: e.hud, social: e.social })),
       window.alpinoxi.on.accountUpdate(() => void store.refreshAccounts()),
       window.alpinoxi.on.toast((e) => store.pushToast(e))
     ]

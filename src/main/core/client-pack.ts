@@ -20,6 +20,8 @@ export interface ClientMod {
   loaders?: LoaderType[]
   /** minimum minecraft version (inclusive) */
   minMc?: string
+  /** maximum minecraft version (inclusive) — örn. QuickSkin yalnızca 1.20.1 */
+  maxMc?: string
   description: string
 }
 
@@ -44,18 +46,22 @@ export const ALPINOXI_MODS: ClientMod[] = [
   { slug: 'noisium', name: 'Noisium', minMc: '1.20', description: 'Dünya üretimi optimizasyonu' },
   { slug: 'c2me-fabric', name: 'C2ME', minMc: '1.19', description: 'Çok çekirdekli chunk yüklemesi' },
   { slug: 'kronhud', name: 'KronHUD', loaders: ['fabric', 'alpinoxi'], description: 'FPS/CPS/koordinat HUD katmanı' },
+  { slug: 'quickskin', name: 'QuickSkin', loaders: ['fabric', 'alpinoxi'], maxMc: '1.20.1', description: 'Oyun içi skin değiştirici (yalnızca 1.20.1)' },
   { slug: 'smooth-swapping', name: 'Smooth Swapping', minMc: '1.19', description: 'Envanter animasyonları' },
   { slug: 'zoomify', name: 'Zoomify', description: 'Optifine tarzı zoom' }
 ]
 
+function versionLt(a: string, b: string): boolean {
+  const [a1, a2] = a.split('.').map((n) => parseInt(n, 10))
+  const [b1, b2] = b.split('.').map((n) => parseInt(n, 10))
+  if (a1 !== b1) return a1 < b1
+  return (a2 ?? 0) < (b2 ?? 0)
+}
+
 function supports(mod: ClientMod, mcVersion: string, loader: LoaderType): boolean {
   if (mod.loaders && !mod.loaders.includes(loader)) return false
-  if (mod.minMc) {
-    const [a, b] = mcVersion.split('.').map((n) => parseInt(n, 10))
-    const [c, d] = mod.minMc.split('.').map((n) => parseInt(n, 10))
-    if (a !== c) return a < c
-    return (b ?? 0) < (d ?? 0)
-  }
+  if (mod.minMc && versionLt(mcVersion, mod.minMc)) return false
+  if (mod.maxMc && versionLt(mod.maxMc, mcVersion)) return false
   return true
 }
 
