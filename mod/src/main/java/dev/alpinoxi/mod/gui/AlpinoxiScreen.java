@@ -33,9 +33,25 @@ public class AlpinoxiScreen extends Screen {
     private static final int PAD = 8;
     private static final int HEADER_H = 32;
 
+    /** Minecraft ana menüsündeki "splash" yazıları (assets/minecraft/texts/splashes.txt ile aynı). */
+    private static final String[] SPLASHES = {
+            "OneClient is the best!",
+            "Alpinoxi Client!",
+            "Launcher + oyun içi senkron!",
+            "HUD tamamen senin kontrolünde!",
+            "Essential benzeri arkadaşlık!",
+            "Partiler burada!",
+            "Fabric gücüyle çalışır!",
+            "Dawn'dan ilham aldık!",
+            "gradlew ile derlendi!",
+            "Sağ Shift ile menüyü aç!",
+            "Tüm sürümler için tasarlandı!"
+    };
+
     private Tab tab = Tab.HOME;
     private TextFieldWidget friendField;
     private TextFieldWidget partyField;
+    private String splash = SPLASHES[0];
 
     private int panelX, panelY, panelW, panelH;
 
@@ -49,6 +65,7 @@ public class AlpinoxiScreen extends Screen {
         panelY = PAD;
         panelW = this.width - PAD * 2;
         panelH = this.height - PAD * 2;
+        splash = SPLASHES[(int) (Math.random() * SPLASHES.length)];
         rebuild();
     }
 
@@ -176,6 +193,11 @@ public class AlpinoxiScreen extends Screen {
         // header
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("ALPINOXI"), panelX + 12, panelY + 10, Theme.ACCENT);
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("CLIENT"), panelX + 12 + this.textRenderer.getWidth("ALPINOXI ") , panelY + 10, Theme.ACCENT_2);
+
+        // splash (Minecraft ana menüsündeki gibi, hafif salınımlı)
+        int splashW = this.textRenderer.getWidth(splash);
+        int bob = (int) Math.round(Math.sin((System.currentTimeMillis() % 1600L) / 1600.0 * Math.PI * 2) * 2);
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal(splash), panelX + panelW - splashW - 12, panelY + 12 + bob, Theme.WARN);
 
         // tabs
         int ty = panelY + HEADER_H + 8;
