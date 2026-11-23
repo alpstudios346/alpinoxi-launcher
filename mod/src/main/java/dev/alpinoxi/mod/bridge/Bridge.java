@@ -30,6 +30,17 @@ public final class Bridge {
     public static String skinPath = "";
     public static String skinModel = "classic";
 
+    /** Launcher'daki hesaplar ve oyun içi hesap değiştirici için seçili hesap. */
+    public static List<AccountDto> accounts = new ArrayList<>();
+    public static String activeAccountId = "";
+
+    /** Oyun içinden hesap seçer; launcher bir sonraki başlatmada uygular. */
+    public static synchronized void selectAccount(String id) {
+        if (id == null || id.isEmpty()) return;
+        activeAccountId = id;
+        write("mod");
+    }
+
     private Bridge() {}
 
     public static void init() {
@@ -52,6 +63,8 @@ public final class Bridge {
                 if (p.social != null) social = p.social;
                 if (p.skinPath != null) skinPath = p.skinPath;
                 if (p.skinModel != null) skinModel = p.skinModel;
+                if (p.accounts != null) accounts = p.accounts;
+                if (p.activeAccountId != null) activeAccountId = p.activeAccountId;
             }
         } catch (Exception ignored) {
             // bozuk dosya — mevcut durum korunur
@@ -71,6 +84,8 @@ public final class Bridge {
             p.social = social;
             p.skinPath = skinPath;
             p.skinModel = skinModel;
+            p.accounts = accounts;
+            p.activeAccountId = activeAccountId;
             p.source = source;
             p.updatedAt = System.currentTimeMillis();
             Files.write(file.toPath(), GSON.toJson(p).getBytes(StandardCharsets.UTF_8));
@@ -88,8 +103,16 @@ public final class Bridge {
         public SocialState social;
         public String skinPath = "";
         public String skinModel = "classic";
+        public List<AccountDto> accounts = new ArrayList<>();
+        public String activeAccountId = "";
         public String source = "mod";
         public long updatedAt;
+    }
+
+    public static class AccountDto {
+        public String id;
+        public String username;
+        public String type = "offline";
     }
 
     public static class HudConfig {

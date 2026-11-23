@@ -6,7 +6,7 @@ import { instanceGameDir } from './paths'
 import { getHud, setHud } from './hud'
 import { getActiveSkin } from './cosmetics'
 import { applySocialFromBridge, socialState } from './social'
-import { currentAccount } from './auth'
+import { currentAccount, listAccounts, setCurrentAccount } from './auth'
 
 /**
  * Launcher <-> oyun içi modül köprüsü.
@@ -61,21 +61,39 @@ export interface ModSkin {
   username: string
 }
 
+export interface ModAccount {
+  id: string
+  username: string
+  /** 'offline' | 'microsoft' | 'elyby' */
+  type: string
+}
+
 export interface BridgePayload {
   hud: ModHud
   social: ModSocial
   skin?: ModSkin
+  /** Launcher'daki hesaplar; oyun içi hesap değiştirici bunları listeler. */
+  accounts?: ModAccount[]
+  /** Mod tarafından seçilen hesap kimliği (launcher'a geri bildirilir). */
+  activeAccountId?: string
   source: 'launcher' | 'mod'
   updatedAt: number
 }
 
 type BridgeListener = (payload: { hud: HudConfig; social: SocialPayload; skin?: ModSkin }) => void
+type AccountListener = () => void
 
 let activeInstanceId: string | null = null
 let listener: BridgeListener | null = null
+let accountListener: AccountListener | null = null
 
 export function onBridgeUpdate(cb: BridgeListener): void {
   listener = cb
+}
+
+/** Oyun içinden hesap değiştirildiğinde tetiklenir. */
+export function onAccountSwitch(cb: AccountListener): void {
+  accountListener = cb
 }
 
 /** Oyun başlatıldığında/durduğunda köprü hedefini ayarlar. */
@@ -184,6 +202,14 @@ function socialFromMod(mod: ModSocial): void {
   applySocialFromBridge(friends, party)
 }
 
+function accountsToMod(): { accounts: ModAccount[]; activeAccountId: string } {
+  const active = currentAccount()
+  return {
+    accounts: listAccounts().map((a) => ({ id: a.id, username: a.username, type: a.type })),
+    activeAccountId: active?.id ?? ''
+  }
+}
+
 function resolveSkin(): ModSkin | undefined {
   const account = currentAccount()
   const active = getActiveSkin()
@@ -232,13 +258,16 @@ export function writeBridge(instanceId: string, payload: BridgePayload): void {
   }
 }
 
-/** Launcher durumunu (HUD + sosyal + skin) aktif oyun kurulumuna yazar. */
+/** Launcher durumunu (HUD + sosyal + skin + hesaplar) aktif oyun kurulumuna yazar. */
 export function pushBridge(instanceId: string | null = activeInstanceId): void {
   if (!instanceId) return
+  const { accounts, activeAccountId } = accountsToMod()
   writeBridge(instanceId, {
     hud: hudToMod(getHud()),
     social: socialToMod(),
     skin: resolveSkin(),
+    accounts,
+    activeAccountId,
     source: 'launcher',
     updatedAt: Date.now()
   })
@@ -262,11 +291,23 @@ export function pullBridge(instanceId: string | null = activeInstanceId): boolea
   socialFromMod(payload.social)
   const socialChanged = before !== JSON.stringify(socialState())
 
+  // Oyun içinden hesap değiştirildiyse launcher'da geçerli hesabı güncelle
+  // (yeni hesap bir sonraki oyun başlatmasında etkin olur).
+  let accountChanged = false
+  if (payload.activeAccountId && payload.activeAccountId !== currentAccount()?.id) {
+    const target = listAccounts().find((a) => a.id === payload.activeAccountId)
+    if (target) {
+      setCurrentAccount(target.id)
+      accountChanged = true
+    }
+  }
+
   // Otoriter durumu geri yaz (mod bir sonraki turda aynı değerleri görsün).
   pushBridge(instanceId)
 
   if (hudChanged || socialChanged) {
     listener?.({ hud: getHud(), social: socialState(), skin: payload.skin })
   }
-  return hudChanged || socialChanged
+  if (accountChanged) accountListener?.()
+  return hudChanged || socialChanged || accountChanged
 }

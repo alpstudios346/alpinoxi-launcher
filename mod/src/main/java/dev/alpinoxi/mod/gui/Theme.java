@@ -7,6 +7,7 @@ public final class Theme {
     public static final int CONTENT = 0xB0141022;
     public static final int ROW = 0x33FFFFFF;
     public static final int ROW_HOVER = 0x55FFFFFF;
+    public static final int ROW_ACTIVE = 0x667C5CFF;
 
     public static final int ACCENT = 0xFF7C5CFF;
     public static final int ACCENT_2 = 0xFF22D3EE;

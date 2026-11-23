@@ -43,6 +43,7 @@ import {
 import { getHud, setHud } from '../core/hud'
 import {
   activeBridgeInstance,
+  onAccountSwitch,
   onBridgeUpdate,
   pullBridge,
   pushBridge,
@@ -84,6 +85,7 @@ export function registerIpc(): void {
     pushBridge()
   })
   onBridgeUpdate((snapshot) => send(EVENTS.bridgeUpdate, snapshot))
+  onAccountSwitch(() => send(EVENTS.accountUpdate, listAccounts()))
 
   // ---- app -----------------------------------------------------------------
   ipcMain.handle(IPC.app.info, (): AppInfo => ({

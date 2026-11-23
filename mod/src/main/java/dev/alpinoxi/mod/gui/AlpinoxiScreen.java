@@ -12,13 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Dawn tarzı, Alpinoxi markalı oyun içi menü. Sekmeler: Ana Sayfa / HUD / Arkadaşlar / Parti / Ayarlar. */
+/** Dawn tarzı, Alpinoxi markalı oyun içi menü. Sekmeler: Ana Sayfa / HUD / Arkadaşlar / Parti / Hesaplar / Ayarlar. */
 public class AlpinoxiScreen extends Screen {
     private enum Tab {
         HOME("Ana Sayfa"),
         HUD("HUD"),
         FRIENDS("Arkadaşlar"),
         PARTY("Parti"),
+        ACCOUNTS("Hesaplar"),
         SETTINGS("Ayarlar");
 
         final String label;
@@ -203,6 +204,7 @@ public class AlpinoxiScreen extends Screen {
             case HUD -> renderHud(ctx, contentX, cy, contentW, mouseX, mouseY);
             case FRIENDS -> renderFriends(ctx, contentX, cy, contentW, mouseX, mouseY);
             case PARTY -> renderParty(ctx, contentX, cy, contentW);
+            case ACCOUNTS -> renderAccounts(ctx, contentX, cy, contentW, mouseX, mouseY);
             case SETTINGS -> renderSettings(ctx, contentX, cy);
         }
 
@@ -282,6 +284,24 @@ public class AlpinoxiScreen extends Screen {
         }
     }
 
+    private void renderAccounts(DrawContext ctx, int x, int y, int w, int mouseX, int mouseY) {
+        if (Bridge.accounts.isEmpty()) {
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal("Hesap bulunamadı. Launcher'dan hesap ekleyin."), x, y, Theme.DIM);
+            return;
+        }
+        for (Bridge.AccountDto a : Bridge.accounts) {
+            boolean active = a.id != null && a.id.equals(Bridge.activeAccountId);
+            boolean hover = isInside(mouseX, mouseY, x, y, w, 18);
+            ctx.fill(x, y, x + w, y + 18, active ? Theme.ROW_ACTIVE : (hover ? Theme.ROW_HOVER : Theme.ROW));
+            String label = (active ? "● " : "○ ") + a.username;
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal(label), x + 6, y + 5, active ? Theme.TEXT : Theme.DIM);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal(a.type), x + w - 70, y + 5, Theme.ACCENT_2);
+            y += 20;
+        }
+        y += 4;
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal("Hesap değişikliği bir sonraki başlatmada etkin olur."), x, y, Theme.DIM);
+    }
+
     private void renderSettings(DrawContext ctx, int x, int y) {
         ctx.drawTextWithShadow(this.textRenderer, Text.literal("Menü tuşu: Sağ Shift"), x, y, Theme.TEXT);
         y += 12;
@@ -334,6 +354,14 @@ public class AlpinoxiScreen extends Screen {
             for (Bridge.FriendDto f : Bridge.social.friends) {
                 if (isInside(mouseX, mouseY, contentX + contentW - 110, cy, 20, 18)) {
                     removeFriend(f.id);
+                    return true;
+                }
+                cy += 20;
+            }
+        } else if (this.tab == Tab.ACCOUNTS) {
+            for (Bridge.AccountDto a : Bridge.accounts) {
+                if (isInside(mouseX, mouseY, contentX, cy, contentW, 18)) {
+                    Bridge.selectAccount(a.id);
                     return true;
                 }
                 cy += 20;
